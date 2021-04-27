@@ -1,0 +1,10 @@
+from sympy import *
+rho, v, c = symbols('rho v c')
+# M = Matrix([[v, rho, 0], [0, v, 1/rho], [0, rho*c**2, v]])
+# M = Matrix([[v, 0, 0], [rho, v, rho*c**2], [0, 1/rho, v]])
+# print(M)
+M = Matrix([[v, rho, 0, 0], [0, v, 1/rho, 0], [0, rho*c**2, v, 0], [0, 0, 0, v]])
+eigen_vectors = M.eigenvects()
+print(eigen_vectors)
+Q = Matrix([[1,1,0,1], [-c/rho, 0, 0, c/rho], [c**2, 0, 0, c**2], [0, 0, 1, 0]])
+print(Q**-1)
