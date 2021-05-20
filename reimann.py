@@ -24,13 +24,13 @@ def shift(array, shift_value, fill_value=np.nan):
 
 class euler:
 	def __init__(self, x_0, x_f, t_f, k, CFL, r, p, characteristic, time_int):
-		self.start_time = time.clock()
+		# self.start_time = time.clock()
 		self.elapsed_time = 0
 		# self.mapped = mapped
 		self.x_0 = x_0 # domain left bound
 		self.x_f = x_f # domain right bound
 		self.x = np.linspace(x_0, x_f, k)
-		self.tiny = 1e-99
+		self.tiny = np.finfo(1.0).tiny
 		self.t = 0.0
 		self.t_f = t_f # final time
 		self.k = k # number of spatial grid points
@@ -43,7 +43,7 @@ class euler:
 		self.b = get_optimal_weights(r).reshape(r+1, 1, 1)
 		self.h = (x_f-x_0)/(k-1)
 
-		# self.x_half = np.linspace(x_0 + self.h/2, self.x_f-self.h/2, self.k-1)
+		self.x_half = np.linspace(x_0 + self.h/2, self.x_f-self.h/2, self.k-1)
 
 		self.gamma = 1.4
 		# self.boundary_type = boundary_type
@@ -59,7 +59,7 @@ class euler:
 			self.quad_points = get_quadrature_points(p)
 
 		# conds = [self.x <= 0, self.x > 0]
-		# LAX
+		# # LAX
 		# self.u_p = np.array([
 		# 	np.piecewise(self.x, conds, [0.445, 0.5]),
 		# 	np.piecewise(self.x, conds, [0.698, 0.0]),
@@ -73,17 +73,27 @@ class euler:
 		# 	np.piecewise(self.x, conds, [1.0, 0.1])
 		# 	]).T
 
-		# SHU OSHER
-		A_rho = 0.2
-		kappa_rho = 5.0
-		x_sw = -4
-		conds = [self.x <= x_sw, self.x > x_sw]
-
+		# Woodward-Colella Blast Wave
+		conds = [(self.x >= 0) & (self.x < 0.1), (self.x >= 0.1) & (self.x < 0.9), self.x >= 0.9]
 		self.u_p = np.array([
-			np.piecewise(self.x, conds, [lambda x: 27/7, lambda x: 1.0 + A_rho*np.sin(kappa_rho * x)]),
-			np.piecewise(self.x, conds, [4*np.sqrt(35)/9, 0.0]),
-			np.piecewise(self.x, conds, [31/3, 1.0])
+			np.piecewise(self.x, conds, [1.0, 1.0, 1.0]),
+			np.piecewise(self.x, conds, [0.0, 0.0, 0.0]),
+			np.piecewise(self.x, conds, [1000.0, 0.01, 100.0])
 			]).T
+		# print(self.u_p)
+		# sys.exit()
+
+		# SHU OSHER
+		# A_rho = 0.2
+		# kappa_rho = 5.0
+		# x_sw = -4
+		# conds = [self.x <= x_sw, self.x > x_sw]
+
+		# self.u_p = np.array([
+		# 	np.piecewise(self.x, conds, [lambda x: 27/7, lambda x: 1.0 + A_rho*np.sin(kappa_rho * x)]),
+		# 	np.piecewise(self.x, conds, [4*np.sqrt(35)/9, 0.0]),
+		# 	np.piecewise(self.x, conds, [31/3, 1.0])
+		# 	]).T
 
 		# Martin-Taylor
 		# A_rho = 0.1
@@ -105,7 +115,7 @@ class euler:
 		# self.u_p = np.array([
 		# 	np.piecewise(self.x, conds, [lambda x: 1.515695, lambda x: 1.000000 + A_rho*np.sin(kappa_rho * x)]),
 		# 	np.piecewise(self.x, conds, [0.523346, 0.0]),
-		# 	np.piecewise(self.x, conds, [1.401800, 1.0])
+		# 	np.piecewise(self.x, conds, [1.805000, 1.0])
 		# 	]).T
 
 
@@ -232,15 +242,16 @@ class euler:
 		Q, Q_inverse = self.get_characteristic_transform(u)
 
 		beta = calculate_beta_characteristic(u, self.r, Q, Q_inverse, shift)
-
+		# print(beta)
+		# sys.exit()
 		alpha = self.b/(self.tiny + beta**(self.r+1))
 		# alpha = self.b/(beta+self.epsilon)**(self.r+1)
 		omega = alpha / alpha.sum(axis=0)
 
 		# if self.mapped:
 		# Mapped
-		alpha = omega*(self.b + self.b**2 - 3*self.b*omega + omega**2) / (self.b**2 + omega*(1 - 2*self.b))
-		omega = alpha / alpha.sum(axis=0)
+		alpha_m = omega*(self.b + self.b**2 - 3*self.b*omega + omega**2) / (self.b**2 + omega*(1 - 2*self.b))
+		omega = alpha_m / alpha_m  .sum(axis=0)
 
 		# AIM Mapping
 
@@ -259,6 +270,8 @@ class euler:
 		Q, Q_inverse = self.get_characteristic_transform(u)	
 		
 		beta = calculate_beta_characteristic(u, self.r, Q, Q_inverse, shift)
+		# print(beta)
+		# sys.exit()
 		alpha = self.b/(self.tiny + beta**(self.r+1))
 		# alpha = self.b/(beta+self.epsilon)**(self.r+1)
 		omega = alpha / alpha.sum(axis=0)
@@ -277,17 +290,25 @@ class euler:
 		
 		# if self.characteristic:
 		u_p_reconstructed_l = self.weno_characteristic_left()
+
 		u_p_reconstructed_r = self.weno_characteristic_right()
+
 		# else:
 		# 	u_p_reconstructed_l = self.weno_left()
 		# 	u_p_reconstructed_r = self.weno_right()
-
+		# plt.plot(self.x_half, u_p_reconstructed_l[:,2], color='purple')
+		# plt.plot(self.x_half, u_p_reconstructed_r[:,2])
+		# plt.plot(self.x, self.u_p[:,2], marker='.')
+		# plt.show()
+		# sys.exit()
 		u_c_reconstructed_l = self.get_conservative_vars(u_p_reconstructed_l)
 		u_c_reconstructed_r = self.get_conservative_vars(u_p_reconstructed_r)
 
 		flux_left = self.get_flux(u_p_reconstructed_l) + max_characteristic*u_c_reconstructed_l
 		flux_right = self.get_flux(u_p_reconstructed_r) - max_characteristic*u_c_reconstructed_r
-	
+		# plt.plot(self.x_half, flux_right)
+		# plt.show()
+		# sys.exit()
 		return 1/2*(flux_left + flux_right)
 
 	def get_dudx(self):
@@ -305,16 +326,22 @@ class euler:
 		self.entropy = np.log(e)-(self.gamma-1)*np.log(self.u_p[:,0])
 
 	def rk4(self):
-		self.tau = self.CFL * self.h / self.get_maximum_characteristic(self.u_p) 
+		self.tau = self.CFL * self.h / self.get_maximum_characteristic(self.u_p)
+
 		u_c = self.u_c
 
 		k1 = -self.get_dudx()
 		self.u_c = u_c + self.tau*1/2*k1
-		self.u_p = self.get_primitive_vars(self.u_c)		
+		self.u_p = self.get_primitive_vars(self.u_c)
+		# print(self.u_p)
+		# # plt.plot(self.x, self.u_p)
+		# # plt.show()
+		# sys.exit()
 		
 		k2 = -self.get_dudx()
 		self.u_c = u_c + self.tau*1/2*k2
 		self.u_p = self.get_primitive_vars(self.u_c)
+
 
 		k3 = -self.get_dudx()
 		self.u_c = u_c + self.tau*k3
@@ -323,7 +350,10 @@ class euler:
 		k4 = -self.get_dudx()
 		self.u_c = u_c + self.tau*(1/6*k1+1/3*k2+1/3*k3+1/6*k4)
 		self.u_p = self.get_primitive_vars(self.u_c)
-
+		# print(self.tau + self.t)
+		# sys.exit()
+		# print(self.u_p)
+		# sys.exit()
 	# def ssprk3(self):
 	# 	self.tau = self.CFL * self.h / self.get_maximum_characteristic(self.u_p) 
 	# 	u_c = self.u_c
@@ -345,9 +375,12 @@ class euler:
 		u_c = self.u_c
 		
 		k1 = -self.get_dudx()
+		# plt.plot(self.x, k1)
+		# plt.show()
+		
 		self.u_c = u_c + self.tau*k1
 		self.u_p = self.get_primitive_vars(self.u_c)		
-		
+
 		k2 = -self.get_dudx()
 		self.u_c = 3/4*u_c + 1/4*(u_c + self.tau*k1) + 1/4*self.tau*k2
 		self.u_p = self.get_primitive_vars(self.u_c)
@@ -356,6 +389,8 @@ class euler:
 		self.u_c = u_c + self.tau*(1/6*k1 + 1/6*k2 + 2/3*k3)
 		self.u_p = self.get_primitive_vars(self.u_c)
 
+		# print(self.u_p)
+		# sys.exit()
 		# self.tau = self.CFL * self.h / self.get_maximum_characteristic(self.u_p) 
 		# u_0 = np.copy(self.u_c)
 
@@ -415,13 +450,20 @@ class euler:
 		# line2, = ax.plot(self.x,self.u_p[:,1],'b-')
 		# line3, = ax.plot(self.x,self.u_p[:,2],'g-')
 		while self.t < self.t_f:
+		# for i in range(2):
 			if self.time_int == 'rk4':
 				self.rk4()
 			elif self.time_int == 'sdc': 
 				self.sdc()
 			elif self.time_int == 'ssprk3':
 				self.ssprk3()
+			# print(self.tau)
+			# sys.exit()
 			self.t = self.t + self.tau
+			# print(self.t)
+			# print(self.u_p)
+			# sys.exit()
+			# print("")
 			# elif self.time_int == 'sdc6':
 			# 	self.sdc6()
 			# line1.set_ydata(self.u_p[:,0])
@@ -429,28 +471,32 @@ class euler:
 			# line3.set_ydata(self.u_p[:,2])
 			# fig.canvas.draw()
 			# fig.canvas.flush_events()
+		# print(self.u_p)
+		# plt.show()
+		# sys.exit()
 		self.calculate_entropy()
-		self.elapsed_time = time.clock() - self.start_time
-		print('done, time: ', self.elapsed_time)		
+		# self.elapsed_time = time.clock() - self.start_time
+		# print('done, time: ', self.elapsed_time)		
 
-x0 = -5
-xf = 5
-tf = 1.3
+x0 = 0
+xf = 1
+tf = 0.038
 # N = 6401
 # CFL = 0.01
 # problem_type = 'moving-shock'
 characteristic = True
 
 # print(np.finfo(0.11).tiny)
-a = euler(x0, xf, tf, 1001, 0.01, 7, 9, characteristic, 'rk4')
+a = euler(x0, xf, tf, 201, 0.1, 1, 9, characteristic, 'rk4')
 # b = euler(x0, xf, tf, 1001, 0.1, 7, None, characteristic, 'edge', 'sdc')
 # b = euler(x0, xf, tf, 101, CFL, 7, 9, characteristic, 'edge', 'sdc')
 # c = euler(x0, xf, tf, 201, CFL, 7, 9, characteristic, 'edge', 'sdc')
 # d = euler(x0, xf, tf, 401, CFL, 7, 9, characteristic, 'edge', 'sdc')
 # e = euler(x0, xf, tf, 801, CFL, 7, 9, characteristic, 'edge', 'sdc')
 # f = euler(x0, xf, tf, 1601, CFL, 7, 9, characteristic, 'edge', 'sdc')
-plt.title("15, CFL=0.01, rk4")
+# plt.title("15, CFL=0.01, rk4")
 plt.plot(a.x, a.u_p[:,0], linewidth=1, color='black')
+# plt.xlim(0.5,0.9)
 # plt.plot(b.x, b.u_p[:,0], linewidth=1, color='mediumorchid')
 # plt.plot(c.x, c.u_p[:,0], linestyle='dashed', linewidth=2, color='teal')
 # plt.plot(d.x, d.u_p[:,0], linestyle='dashed', linewidth=2, color='navy')

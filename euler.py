@@ -8,7 +8,7 @@ from get_optimal_weights import get_optimal_weights
 from reconstruct import calculate_beta_characteristic, calculate_beta_no_characteristic
 from quadrature_weights import get_quadrature_weights, get_quadrature_points
 from calculate_error import calculate_error
-import time
+# import time
 
 
 # shifts an array. Passing a positive shift value implies a negative index, 
@@ -27,7 +27,7 @@ def shift(array, shift_value, fill_value=np.nan):
 
 class euler:
 	def __init__(self, x_0, x_f, t_f, k, CFL, r, p, characteristic, boundary_type, time_int, problem_type, shuffle_shock):
-		self.start_time = time.clock()
+		# self.start_time = time.clock()
 		self.elapsed_time = 0
 		self.x_0 = x_0 # domain left bound
 		self.x_f = x_f # domain right bound
@@ -45,7 +45,7 @@ class euler:
 		self.b = get_optimal_weights(r).reshape(r+1, 1, 1)
 		self.h = (x_f-x_0)/(k-1)
 
-		# self.x_half = np.linspace(x_0 + self.h/2, self.x_f-self.h/2, self.k-1)
+		self.x_half = np.linspace(x_0 + self.h/2, self.x_f-self.h/2, self.k-1)
 
 		self.gamma = 1.4
 		self.boundary_type = boundary_type
@@ -60,15 +60,21 @@ class euler:
 			self.q = get_quadrature_weights(p)
 			self.quad_points = get_quadrature_points(p)
 
-		A_rho = 0.2
-		kappa_rho = 5.0
-		x_sw = -4
-		conds = [self.x <= x_sw, self.x > x_sw]
+		# A_rho = 0.2
+		# kappa_rho = 5.0
+		# x_sw = -4
+		# conds = [self.x <= x_sw, self.x > x_sw]
 
+		# self.u_p = np.array([
+		# 	np.piecewise(self.x, conds, [lambda x: 27/7, lambda x: 1.0 + A_rho*np.sin(kappa_rho * x)]),
+		# 	np.piecewise(self.x, conds, [4*np.sqrt(35)/9, 0.0]),
+		# 	np.piecewise(self.x, conds, [31/3, 1.0])
+		# 	]).T
+		conds = [(self.x >= 0) & (self.x < 0.1), (self.x >= 0.1) & (self.x < 0.9), self.x >= 0.9]
 		self.u_p = np.array([
-			np.piecewise(self.x, conds, [lambda x: 27/7, lambda x: 1.0 + A_rho*np.sin(kappa_rho * x)]),
-			np.piecewise(self.x, conds, [4*np.sqrt(35)/9, 0.0]),
-			np.piecewise(self.x, conds, [31/3, 1.0])
+			np.piecewise(self.x, conds, [1.0, 1.0, 1.0]),
+			np.piecewise(self.x, conds, [0.0, 0.0, 0.0]),
+			np.piecewise(self.x, conds, [1000.0, 0.01, 100.0])
 			]).T
 		# if shuffle_shock:
 		# 	if problem_type == 'moving-shock':
@@ -140,7 +146,7 @@ class euler:
 		self.run()
 		# self.PLOT_TYPE = REAL_TIME # REAL_TIME/END_TIME
 
-	def get_characteristic_transform(self, u):
+	def get_characteristic_transform_boundary(self, u):
 		u = 1/2*(shift(u,-1)+u)
 		c = np.sqrt(abs(self.gamma*(u[:,2]+self.Pi)/abs(u[:,0])))
 
@@ -174,7 +180,7 @@ class euler:
 		return np.array([u_p[:,0], u_p[:,0]*u_p[:,1], u_p[:,0]*(e+1/2*u_p[:,1]**2)]).T
 
 	def weno_left(self):
-		u = np.pad(self.u_p, ((self.r, self.r-1), (0,0)), mode=self.boundary_type)
+		u = np.pad(self.u_p, ((self.r, self.r-1), (0,0)), mode='reflect', reflect_type='odd')
 		u_p_reconstructed = np.zeros(u.shape) 
 		P = np.zeros(np.append((self.r+1), u.shape))
 		beta = calculate_beta_no_characteristic(u, self.r, shift)
@@ -191,7 +197,7 @@ class euler:
 		return u_p_reconstructed[self.r:-self.r]
 
 	def weno_right(self):
-		u = np.flip(np.pad(self.u_p, ((self.r-1, self.r), (0,0)), mode=self.boundary_type), axis=0)
+		u = np.flip(np.pad(self.u_p, ((self.r-1, self.r), (0,0)), mode='reflect', reflect_type='odd'), axis=0)
 		u_p_reconstructed = np.zeros(u.shape) 
 		P = np.zeros(np.append((self.r+1), u.shape))
 		
@@ -206,33 +212,38 @@ class euler:
 		return np.flip(u_p_reconstructed, axis=0)[self.r:-self.r]
 
 	def weno_characteristic_left(self):
-		u = np.pad(self.u_p, ((self.r, self.r-1), (0,0)), mode=self.boundary_type)
+		u = np.pad(self.u_p, ((self.r, self.r-1), (0,0)), mode='reflect', reflect_type='odd')
 		u_p_reconstructed = np.zeros(u.shape) 
 		P = np.zeros(np.append((self.r+1), u.shape))
-		Q, Q_inverse = self.get_characteristic_transform(u)
+		Q, Q_inverse = self.get_characteristic_transform_boundary(u)
 
 		beta = calculate_beta_characteristic(u, self.r, Q, Q_inverse, shift)
+
 		# print(beta[0]**(self.r+1))
 		# sys.exit()
+		# print(beta)
 		alpha = self.b/(beta+self.epsilon)**(self.r+1)
-		omega = alpha / alpha.sum(axis=0)
 
+		# print("alpha: ", alpha)
+		omega = alpha / alpha.sum(axis=0)
+		# print("omega: ", omega)
+		
 		for k_s in range(self.r+1): # for each stencil
 			# calculate half point polynomial interpolation, P_{r,k_s,i+1/2}		
 			for l in range(self.r+1):
 				P[k_s,:,:] += self.a[k_s,l]*np.matmul(Q_inverse, shift(u, k_s-l).reshape((len(u), self.num_vars, 1))).reshape((len(u), self.num_vars))	
 			u_p_reconstructed = u_p_reconstructed + omega[k_s]*P[k_s]
+		# print(np.matmul(u_p_reconstructed.reshape(len(u),self.num_vars,1), Q))
 		return (np.matmul(Q, u_p_reconstructed.reshape(len(u),self.num_vars,1))).reshape((len(u),self.num_vars))[self.r:-self.r]
 
 	def weno_characteristic_right(self):
-		u = np.flip(np.pad(self.u_p, ((self.r-1, self.r), (0,0)), mode=self.boundary_type), axis=0)
+		u = np.flip(np.pad(self.u_p, ((self.r-1, self.r), (0,0)), mode='reflect', reflect_type='odd'), axis=0)
 		u_p_reconstructed = np.zeros(u.shape) 
 		P = np.zeros(np.append((self.r+1), u.shape))
-		Q, Q_inverse = self.get_characteristic_transform(u)	
+		Q, Q_inverse = self.get_characteristic_transform_boundary(u)	
 		
 		beta = calculate_beta_characteristic(u, self.r, Q, Q_inverse, shift)
-		# print(beta)
-		# sys.exit()
+		
 		alpha = self.b/(beta+self.epsilon)**(self.r+1)
 		omega = alpha / alpha.sum(axis=0)
 
@@ -240,6 +251,9 @@ class euler:
 			for l in range(self.r+1):
 				P[k_s,:,:] += self.a[k_s,l]*np.matmul(Q_inverse, shift(u, k_s-l).reshape((len(u), self.num_vars, 1))).reshape((len(u), self.num_vars))
 			u_p_reconstructed = u_p_reconstructed + omega[k_s]*P[k_s]
+		# print(u_p_reconstructed)
+		# print(Q)
+		# sys.exit()
 		return np.flip((np.matmul(Q, u_p_reconstructed.reshape(len(u),self.num_vars,1))).reshape((len(u),self.num_vars)), axis=0)[self.r:-self.r]
 
 	def flux_split(self):
@@ -250,21 +264,28 @@ class euler:
 			u_p_reconstructed_r = self.weno_characteristic_right()
 		else:
 			u_p_reconstructed_l = self.weno_left()
-			u_p_reconstructed_r = self.weno_right()
-
+			u_p_reconstructed_r = self.weno_right()		
+		
 		u_c_reconstructed_l = self.get_conservative_vars(u_p_reconstructed_l)
 		u_c_reconstructed_r = self.get_conservative_vars(u_p_reconstructed_r)
-
+		
+		# print(u_p_reconstructed_l)
+		# sys.exit()
 		flux_left = self.get_flux(u_p_reconstructed_l) + max_characteristic*u_c_reconstructed_l
+		# print(flux_left)
+		# sys.exit()
 		flux_right = self.get_flux(u_p_reconstructed_r) - max_characteristic*u_c_reconstructed_r
-	
+		
 		return 1/2*(flux_left + flux_right)
 
 	def get_dudx(self):
-		u_split = np.pad(self.flux_split(), [(self.r+1, self.r+1), (0,0)], mode=self.boundary_type)
-	
+		u_split = np.pad(self.flux_split(), [(self.r+1, self.r+1), (0,0)], mode='reflect', reflect_type='odd')
+		# print(u_split)
+		# sys.exit()
+		# print(u_split)
+		# sys.exit()
 		dudx = np.zeros(np.shape(u_split))
-	
+	  
 		for i in range(len(self.d)):
 			dudx += self.d[i]*(shift(u_split, -i)-shift(u_split, i+1))
 	
@@ -277,22 +298,25 @@ class euler:
 	def rk4(self):
 		self.tau = self.CFL * self.h / self.get_maximum_characteristic(self.u_p) 
 		u_c = self.u_c
-
+		# print(self.tau)
 		k1 = -self.get_dudx()
+		# print(k1)  
 		self.u_c = u_c + self.tau*1/2*k1
-		self.u_p = self.get_primitive_vars(self.u_c)		
-		
+		self.u_p = self.get_primitive_vars(self.u_c)
+		# print(self.u_c)
+		# sys.exit()
 		k2 = -self.get_dudx()
 		self.u_c = u_c + self.tau*1/2*k2
 		self.u_p = self.get_primitive_vars(self.u_c)
-
+		
 		k3 = -self.get_dudx()
 		self.u_c = u_c + self.tau*k3
 		self.u_p = self.get_primitive_vars(self.u_c)
-
+		
 		k4 = -self.get_dudx()
 		self.u_c = u_c + self.tau*(1/6*k1+1/3*k2+1/3*k3+1/6*k4)
 		self.u_p = self.get_primitive_vars(self.u_c)
+		
 		# plt.plot(self.x, self.u_p[:,0])
 		# plt.show()
 		# sys.exit()
@@ -359,7 +383,7 @@ class euler:
 		# num_shuffle_points = int(self.k * 0.17)
 
 		# print(np.shape(self.u_p))
-		# self.u_p = np.pad(self.u_p[num_shuffle_points:], ((0, num_shuffle_points), (0,0)), mode=self.boundary_type)
+		# self.u_p = np.pad(self.u_p[num_shuffle_points:], ((0, num_shuffle_points), (0,0)), mode='reflect', reflect_type='odd')
 		# self.u_c = self.get_conservative_vars(self.u_p)
 		# print(np.shape(self.u_p))
 		# print(self.u_p)
@@ -392,6 +416,9 @@ class euler:
 		while self.t < self.t_f:
 			if self.time_int == 'rk4':
 				self.rk4()
+				# plt.plot(self.x, self.u_p)
+				# plt.show()
+				# sys.exit()
 				# print(self.t)
 			elif self.time_int == 'sdc': 
 				self.sdc()
@@ -404,18 +431,18 @@ class euler:
 			# fig.canvas.draw()
 			# fig.canvas.flush_events()
 		self.calculate_entropy()
-		self.elapsed_time = time.clock() - self.start_time
+		# self.elapsed_time = time.clock() - self.start_time
 		print('done, time: ', self.elapsed_time)		
 
-x0 = -5
-xf = 5
-tf = 1.4
-N = 1000
+x0 = 0
+xf = 1
+tf = 0.038
+N = 401
 # CFL = 0.5
 problem_type = 'shock-entropy'
-characteristic = True
+characteristic = False
 
-rk4 = euler(x0, xf, tf, N, 0.4, 5, None, characteristic, 'edge', 'rk4', problem_type, False)
+rk4 = euler(x0, xf, tf, N, 0.5, 3, 3, characteristic, 'reflect', 'rk4', problem_type, False)
 plt.plot(rk4.x, rk4.u_p[:,0], marker='.')
 
 # sdc4 = euler(x0, xf, tf, N, 0.5, 5, 3, characteristic, 'edge', 'sdc', problem_type)

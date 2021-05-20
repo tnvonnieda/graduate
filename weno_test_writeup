@@ -1,0 +1,194 @@
+Original u_p array with 11 points:
+[[ 3.85714286  2.62936879 10.33333333]
+ [ 3.85714286  2.62936879 10.33333333]
+ [ 0.86994243  0.          1.        ]
+ [ 1.10880422  0.          1.        ]
+ [ 1.19178485  0.          1.        ]
+ [ 1.          0.          1.        ]
+ [ 0.80821515  0.          1.        ]
+ [ 0.89119578  0.          1.        ]
+ [ 1.13005757  0.          1.        ]
+ [ 1.18258905  0.          1.        ]
+ [ 0.97352965  0.          1.        ]]
+
+We know that for WENO reconstruction, r phantom nodes are required to the left
+of the domain, and r phantom nodes are required to the right of the domain.
+Thus, we end up with the extended array for third order,
+
+u_p_extended = 
+[[ 3.85714286  2.62936879 10.33333333] ex
+ [ 3.85714286  2.62936879 10.33333333]
+ [ 3.85714286  2.62936879 10.33333333]
+ [ 0.86994243  0.          1.        ]
+ [ 1.10880422  0.          1.        ]
+ [ 1.19178485  0.          1.        ]
+ [ 1.          0.          1.        ]
+ [ 0.80821515  0.          1.        ]
+ [ 0.89119578  0.          1.        ]
+ [ 1.13005757  0.          1.        ]
+ [ 1.18258905  0.          1.        ]
+ [ 0.97352965  0.          1.        ]
+ [ 0.76447025  0.          1.        ]] ex
+
+
+(Additionally, we require the reconstruction of the half point directly to the right
+of the domain for the ROR method. I'll address this later)
+
+For the characteristic, we require Q and Q_inverse as arithmetic averages at the cell boundaries,
+thus one extra point is required on the right of original domain. We only need to calculate these
+values for points inside of the domain (except for ROR, where 1 additional is required). Thus,
+we calculate the matrices using u_p_extended[r:k+r+1]. We calculate the cell boundary averages as
+
+u_p_avg =
+[[ 3.85714286  2.62936879 10.33333333]
+ [ 2.36354264  1.3146844   5.66666667]
+ [ 0.98937333  0.          1.        ]
+ [ 1.15029454  0.          1.        ]
+ [ 1.09589243  0.          1.        ]
+ [ 0.90410757  0.          1.        ]
+ [ 0.84970546  0.          1.        ]
+ [ 1.01062667  0.          1.        ]
+ [ 1.15632331  0.          1.        ]
+ [ 1.07805935  0.          1.        ]
+ [ 0.86899995  0.          1.        ]] this corresponds to the rightmost cell, x_{k-1}
+
+The calculation for Q is
+Q = 
+[[1       1     1]
+ [-c/rho  0     c/rho]
+ [c^2     0     c^2]]
+ where c = sqrt(gamma (p + Pi)/rho)
+So we have Q for the entire domain (11 points) (1st two are verified, rest should be good)
+Q =
+[[[ 1.          1.          1.        ]
+  [-0.50209472  0.          0.50209472]
+  [ 3.75061728  0.          3.75061728]]
+
+ [[ 1.          1.          1.        ]
+  [-0.77514453  0.          0.77514453]
+  [ 3.35654334  0.          3.35654334]]
+
+ [[ 1.          1.          1.        ]
+  [-1.2023301   0.          1.2023301 ]
+  [ 1.41503714  0.          1.41503714]]
+
+ [[ 1.          1.          1.        ]
+  [-0.95907028  0.          0.95907028]
+  [ 1.21707959  0.          1.21707959]]
+
+ [[ 1.          1.          1.        ]
+  [-1.03136438  0.          1.03136438]
+  [ 1.27749765  0.          1.27749765]]
+
+ [[ 1.          1.          1.        ]
+  [-1.37636575  0.          1.37636575]
+  [ 1.5484883   0.          1.5484883 ]]
+
+ [[ 1.          1.          1.        ]
+  [-1.51064147  0.          1.51064147]
+  [ 1.64762975  0.          1.64762975]]
+
+ [[ 1.          1.          1.        ]
+  [-1.16460294  0.          1.16460294]
+  [ 1.38527909  0.          1.38527909]]
+
+ [[ 1.          1.          1.        ]
+  [-0.95157954  0.          0.95157954]
+  [ 1.21073405  0.          1.21073405]]
+
+ [[ 1.          1.          1.        ]
+  [-1.05706091  0.          1.05706091]
+  [ 1.2986298   0.          1.2986298 ]]
+
+ [[ 1.          1.          1.        ]
+  [-1.46061041  0.          1.46061041]
+  [ 1.61104727  0.          1.61104727]]]
+
+The calculation for Q_inverse is
+Q_inverse = 
+[[0     -rho/(2c)     1/(2c^2)]
+ [1     0             -1/(c^2)]
+ [0     rho/(2c)      1/(2c^2)]]
+
+So, Q_inverse for the entire domain is (1st two verified)
+Q_inverse = 
+ [[[ 0.         -0.99582805  0.13331139]
+  [ 1.          0.         -0.26662278]
+  [ 0.          0.99582805  0.13331139]]
+
+ [[ 0.         -0.645041    0.14896277]
+  [ 1.          0.         -0.29792554]
+  [ 0.          0.645041    0.14896277]]
+
+ [[ 0.         -0.41585917  0.35334762]
+  [ 1.          0.         -0.70669523]
+  [ 0.          0.41585917  0.35334762]]
+
+ [[ 0.         -0.52133823  0.41081948]
+  [ 1.          0.         -0.82163896]
+  [ 0.          0.52133823  0.41081948]]
+
+ [[ 0.         -0.48479471  0.39139015]
+  [ 1.          0.         -0.78278031]
+  [ 0.          0.48479471  0.39139015]]
+
+ [[ 0.         -0.36327553  0.32289556]
+  [ 1.          0.         -0.64579112]
+  [ 0.          0.36327553  0.32289556]]
+
+ [[ 0.         -0.33098522  0.30346624]
+  [ 1.          0.         -0.60693247]
+  [ 0.          0.33098522  0.30346624]]
+
+ [[ 0.         -0.42933087  0.3609381 ]
+  [ 1.          0.         -0.72187619]
+  [ 0.          0.42933087  0.3609381 ]]
+
+ [[ 0.         -0.52544215  0.41297261]
+  [ 1.          0.         -0.82594522]
+  [ 0.          0.52544215  0.41297261]]
+
+ [[ 0.         -0.47300964  0.3850212 ]
+  [ 1.          0.         -0.77004239]
+  [ 0.          0.47300964  0.3850212 ]]
+
+ [[ 0.         -0.34232263  0.31035712]
+  [ 1.          0.         -0.62071425]
+  [ 0.          0.34232263  0.31035712]]]
+
+RECONSTRUCTION:
+
+Initialize left and right reconstruction arrays at half points within the domain only, ie. k-1 points
+
+Initialize polynomial reconstructions with r+1 number of stencils at each half point within the domain
+
+LEFT RECONSTRUCTION:
+- Loop through each half point, ie. i in range (k-1)
+	- Calculate beta for each stencil
+	  For 3rd order, we have
+	  beta_{0} = (Q_inverse_{i}*u_{i+1} - Q_inverse_{i}*u_{i})^2
+	  beta_{1} = (Q_inverse_{i}*u_{i} - Q_inverse_{i}*u_{i-1})^2
+
+	  To properly align the Q matrices with u_p, we must reference u_{i} as u_p_extended[i+r]. So
+	  beta[0] = (Q_inverse[i]*u_p_extended[i+r+1] - Q_inverse[i]*u_p_extended[i+r])**2
+	  beta[1] = (Q_inverse[i]*u_p_extended[i+r] - Q_inverse[i]*u_p_extended[i+r-1])**2
+
+	- From this, calculate omega for each stencil
+
+	- Loop through each stencil (k_s in range r+1)
+
+RIGHT RECONSTRUCTION:
+- Perform a left reconstruction on a flipped array
+- After reconstruction, flip back
+
+[[ 3.85714286  2.62936879 10.33333333]
+ [ 3.85714286  2.62936879 10.33333333]
+ [ 0.86994243  0.          1.        ]
+ [ 1.10880422  0.          1.        ]
+ [ 1.19178485  0.          1.        ]
+ [ 1.          0.          1.        ]
+ [ 0.80821515  0.          1.        ]
+ [ 0.89119578  0.          1.        ]
+ [ 1.13005757  0.          1.        ]
+ [ 1.18258905  0.          1.        ]
+ [ 0.97352965  0.          1.        ]]

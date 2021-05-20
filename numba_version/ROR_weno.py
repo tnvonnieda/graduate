@@ -7,7 +7,7 @@ from get_derivative_coefficients import get_derivative_coefficients
 from get_optimal_weights import get_optimal_weights
 from reconstruct import calculate_beta_characteristic, calculate_beta_no_characteristic
 from quadrature_weights import get_quadrature_weights, get_quadrature_points
-from calculate_error import calculate_error
+
 import time
 
 def shift(array, shift_value, fill_value=np.nan):
@@ -222,6 +222,12 @@ class euler:
 	# 		u_p_reconstructed = u_p_reconstructed + omega[k_s]*P[k_s]
 	# 	return np.flip(u_p_reconstructed, axis=0)[self.r:-self.r]
 
+	@jit(nopython=True)
+	def order_reduction(self):
+		ROR = False
+		while ROR == False:
+			for i in range():
+				
 	def recursive_order_reduction(self):
 		# u_p_reconstructed_l_final = np.empty()
 		# u_p_reconstructed_r_final = np.empty()
@@ -306,9 +312,9 @@ class euler:
 		
 		# print(Q_left)
 		# print("")
-		print(Q_right)
-		print(np.flip(Q, axis=0))
-		sys.exit()
+		# print(Q_right)
+		# print(np.flip(Q, axis=0))
+		# sys.exit()
 		beta_right = calculate_beta_characteristic(u_right, self.r, Q_right, Q_inverse_right, shift)
 
 		# lambda_right= np.nanmin(beta_right)/(self.epsilon_m + np.nanmax(beta_right))

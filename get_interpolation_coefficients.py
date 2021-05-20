@@ -2,8 +2,8 @@ import numpy as np
 from fractions import Fraction
 def get_interpolation_coefficients(r): # referenced as a[k_s,l] for a given order
 	r = r+1
-	a = np.zeros([r,r], dtype=np.longdouble)
-	# # a_rational = np.empty([r,r])
+	a = np.zeros([r,r])
+	a_rational = np.empty([r,r])
 	for k_s in range(r): # for each stencil
 		for l in range(r):
 			a[k_s,l] = 1			
@@ -15,8 +15,12 @@ def get_interpolation_coefficients(r): # referenced as a[k_s,l] for a given orde
 				if a_bottom <= 0:
 					a_bottom = a_bottom - 1
 				a[k_s,l] = a[k_s,l]*a_top/a_bottom
+			# print('k_s:', k_s, ' l:', l, Fraction.from_float(a[k_s, l]).limit_denominator(1000000))
 			# a_rational[k_s,l] = Fraction.from_float(a[k_s, l]).limit_denominator(1000000)
-		
+	# for k_s in range(3):
+	# 	for l in range(3):
+	# 		print(a_rational[k_s,l])
+	# sys.exit()
 	# a_rational = []
 	# for i in range(len(d)):
 	# 	d_rational.append(Fraction.from_float(d[i]).limit_denominator(1000000))

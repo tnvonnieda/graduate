@@ -32,9 +32,6 @@ def calculate_beta_no_characteristic(u, r, shift):
 	for i in range(r):
 		u_minus[i] = shift(u, i+1)
 		u_plus[i] = shift(u, -i-1)
-	# print(u_minus[0])
-	# print(u)
-	# sys.exit()
 	if r == 0:
 		return calculate_beta_0(u, u_minus, u_plus)
 	elif r == 1:
@@ -210,7 +207,15 @@ def calculate_beta_5(u, u_minus, u_plus):
 
 	return beta
 
-@jit(nopython=True, parallel=True)
+# def calculate_beta_6(u, r, Q_inverse):
+# 	beta = np.zeros((r+1,3))
+# 	for k_s in range(r+1):
+# 		for l in range(r+1):
+# 			for m in range(l+1):
+# 				beta[k_s] += sigma_6[k_s,l,m]*np.dot(Q_inverse, u[2*r-k_s-l])*np.dot(Q_inverse, u[2*r-k_s-m])
+# 	return beta
+
+# @jit(nopython=True, parallel=True)
 def calculate_beta_6(u, u_minus, u_plus):
 	beta = np.empty((7, len(u), len(u[0])), dtype=np.longdouble)
 	

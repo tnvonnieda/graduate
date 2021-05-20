@@ -1,7 +1,9 @@
 from get_interpolation_coefficients import get_interpolation_coefficients
 import numpy as np
 import math 
-from fractions import Fraction
+from numba import vectorize
+
+# @vectorize
 def get_optimal_weights(r): # referenced as b[k_s] for a given order
 	a1 = get_interpolation_coefficients(r)
 	a2 = get_interpolation_coefficients(2*r)
@@ -17,9 +19,4 @@ def get_optimal_weights(r): # referenced as b[k_s] for a given order
 			b_top_2 = b_top_2 - b[r-1-i]*a1[r-1-i,m-i]
 		b[m] = b_top_1 / b_bottom_1
 		b[r-1-m] = b_top_2 / b_bottom_2
-
-	# b = np.array([7/64, 35/64, 21/64, 1/64])
-	# for value in b:
-		# print(Fraction.from_float(value).limit_denominator(1000000))
-	# sys.exit()
 	return b
