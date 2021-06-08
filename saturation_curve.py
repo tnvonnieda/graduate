@@ -185,8 +185,7 @@ for i in range(len(T)):
 	h_g[i] = enthalpy(T[i], gamma_2, C_v_2, q_2) / 10**3
 
 # plt.ylim([2000, 2800])
-plt.xlabel("T (K)")
-plt.xlim([273,573])
+
 
 T_exp =          np.array([273.16,  288.15,  300.15,  323.15,  348.15, 373.15, 393.15, 423.15, 443.15, 463.15, 473.15, 483.15, 493.15,  503.15,  513.15,  523.15,  533.15,  543.15,  553.15,  563.15,  573.15])
 P_exp =    10**5*np.array([0.00611, 0.01705, 0.03567, 0.1235,  0.3858, 1.014,  1.985,  4.758,  7.917,  12.54,  15.54,  19.06,  23.18,   27.95,   33.44,   39.73,   46.88,   54.99,   64.12,   74.36,   85.81])
@@ -196,34 +195,38 @@ h_l_exp =        np.array([0.01,    62.99,   113.25,  209.33,  313.93, 419.04, 5
 h_g_exp =        np.array([2501.4,  2528.9,  2550.8,  2592.1,  2635.3, 2676.1, 2706.3, 2746.5, 2768.7, 2786.4, 2793.2, 2798.5, 2802.1,  2804.0,  2803.8,  2801.5,  2796.6,  2789.7,  2779.6,  2766.2,  2749.0])
 L_v_exp = h_g_exp - h_l_exp
 
-plt.plot(T,P)
-plt.scatter(T_exp, P_exp)
-plt.ylabel("$p_{sat}, (Pa)$")
+# plt.plot(T,P,color='black',linestyle='dashed')
+# plt.scatter(T_exp, P_exp, color="mediumorchid")
+# plt.ylabel("$p_{sat}$ (Pa)", fontsize=16)
 # plt.ylim([0, 80])
 
-# plt.plot(T, v_g)
-# plt.scatter(T_exp, v_g_exp)
-# plt.ylabel("$\\nu_{vap}$ $(m^{3}/kg)$")
-# plt.ylim([0, 250])
+plt.plot(T, v_g,color='black',linestyle='dashed')
+plt.scatter(T_exp, v_g_exp, color="mediumorchid")
+plt.ylabel("$\\nu_{vap}$ $(m^{3}/kg)$", fontsize=20)
+plt.ylim([0, 220])
 
-# plt.plot(T, v_l)
-# plt.scatter(T_exp, v_l_exp)
-# plt.ylabel("$\\nu_{liq}$ $(m^{3}/kg)$")
+# plt.figure(figsize=(8,6))
+plt.xlabel("$T$ (K)", fontsize=20)
+# plt.xlim([273,573])
+# plt.plot(T, v_l,color='black',linestyle='dashed')
+# plt.scatter(T_exp, v_l_exp, color="mediumorchid")
+# plt.ylabel("$\\nu_{liq}$ $(m^{3}/kg)$", fontsize=16)
 
-# plt.plot(T, h_g)
-# plt.scatter(T_exp, h_g_exp)
-# plt.ylabel("$h_{vap}$ $(J/kg)$")
+
+# plt.plot(T, h_g,color='black',linestyle='dashed')
+# plt.scatter(T_exp, h_g_exp, color="mediumorchid")
+# plt.ylabel("$h_{vap}$ $(J/kg)$", fontsize=16)
 # plt.ylim([2400, 2900])
 
-# plt.plot(T, h_l)
-# plt.scatter(T_exp, h_l_exp)
-# plt.ylabel("$h_{liq}$ $(J/kg)$")
+# plt.plot(T, h_l,color='black',linestyle='dashed')
+# plt.scatter(T_exp, h_l_exp, color="mediumorchid")
+# plt.ylabel("$h_{liq}$ $(J/kg)$", fontsize=16)
 # plt.ylim([0, 1400])
 
 # L_v = h_g - h_l
-# plt.plot(T, L_v)
-# plt.scatter(T_exp, L_v_exp)
-# plt.ylabel("$L_{v}$ $(J/kg)$")
+# plt.plot(T, L_v,color='black',linestyle='dashed')
+# plt.scatter(T_exp, L_v_exp, color="mediumorchid")
+# plt.ylabel("$L_{v}$ (J/kg)", fontsize=16)
 # plt.ylim([1400, 2600])
 
 plt.show()

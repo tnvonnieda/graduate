@@ -44,7 +44,6 @@ class burgers:
 		self.time_int = time_int
 		self.boundary_type = boundary_type
 		self.epsilon = 10**(-40)
-		self.tiny = np.finfo(1.0).tiny
 		if time_int == 'sdc':
 			self.q = get_quadrature_weights(p)
 			self.quad_points = get_quadrature_points(p)
@@ -96,11 +95,11 @@ class burgers:
 	def weno_left(self):
 		u = np.pad(self.u[0:-1], ((self.r, self.r), (0,0)), mode='wrap')
 
+
 		P = np.zeros(np.append((self.r+1), u.shape))
 		u_reconstructed = np.zeros(u.shape)
 		beta = calculate_beta_no_characteristic(u, self.r, shift)
-		# alpha = self.b/(beta+self.epsilon)**(self.r+1)
-		alpha = self.b/(self.tiny + beta**(self.r+1))
+		alpha = self.b/(beta+self.epsilon)**(self.r+1)
 		omega = alpha / alpha.sum(axis=0)
 		
 		alpha_m = omega*(self.b + self.b**2 - 3*self.b*omega + omega**2) / (self.b**2 + omega*(1 - 2*self.b))
@@ -139,8 +138,7 @@ class burgers:
 		P = np.zeros(np.append((self.r+1), u.shape))
 		
 		beta = calculate_beta_no_characteristic(u, self.r, shift)
-		alpha = self.b/(self.tiny + beta**(self.r+1))
-		# alpha = self.b/(beta+self.epsilon)**(self.r+1)
+		alpha = self.b/(beta+self.epsilon)**(self.r+1)
 		omega = alpha / alpha.sum(axis=0)
 		alpha_m = omega*(self.b + self.b**2 - 3*self.b*omega + omega**2) / (self.b**2 + omega*(1 - 2*self.b))
 		omega_m = alpha_m / alpha_m.sum(axis=0)
@@ -269,16 +267,16 @@ class burgers:
 t_s = 1/np.pi
 t_f = 0.7
 
-x_0 = 0.0
-x_f = 2.0
+x_0 = 0.
+x_f = 2.
 CFL = 1.0
 
-a = burgers(x_0, x_f, t_f, 21, CFL, 8, 10, 'sdc', 'wrap', None, None)
-b = burgers(x_0, x_f, t_f, 41, CFL, 8, 10, 'sdc', 'wrap', None, None)
-c = burgers(x_0, x_f, t_f, 81, CFL, 8, 10, 'sdc', 'wrap', None, None)
-d = burgers(x_0, x_f, t_f, 161, CFL, 8, 10, 'sdc', 'wrap', None, None)
-e = burgers(x_0, x_f, t_f, 321, CFL, 8, 10, 'sdc', 'wrap', None, None)
-f = burgers(x_0, x_f, t_f, 641, CFL, 8, 10, 'sdc', 'wrap', None, None)
+a = burgers(x_0, x_f, t_f, 21, CFL, 2, 4, 'sdc', 'wrap', None, None)
+b = burgers(x_0, x_f, t_f, 41, CFL, 2, 4, 'sdc', 'wrap', None, None)
+c = burgers(x_0, x_f, t_f, 81, CFL, 2, 4, 'sdc', 'wrap', None, None)
+d = burgers(x_0, x_f, t_f, 161, CFL, 2, 4, 'sdc', 'wrap', None, None)
+# e = burgers(x_0, x_f, t_f, 321, CFL, 7, 9, 'sdc', 'wrap', None, None)
+# f = burgers(x_0, x_f, t_f, 641, CFL, 7, 9, 'sdc', 'wrap', None, None)
 
 # print(a.t)
 def func(u, x, t):
@@ -288,7 +286,7 @@ x = np.linspace(a.x_0, a.x_f, 5000)
 # u_exact = 1/2 + np.sin(np.pi * (x_exact - u*t))
 # x_exact = np.linspace(0, 2, 5000)
 x_s = 1/(2*np.pi) + 1 + (t_f - t_s)*1/2
-# print(x_s)
+print(x_s)
 # print(x_s)
 u_guess = np.piecewise(x, [x < x_s, x >= x_s], [lambda x: 0.158 + x/x_s, lambda x: -1.3 + x/x_s])
 u_exact = np.empty(np.shape(x))
@@ -297,17 +295,16 @@ for i in range(len(x)):
 	u_exact[i] = optimize.newton(func, u_guess[i], args=(x[i], t))
 plt.plot(x, u_exact, color='maroon', linewidth=2)
 
-plt.title('WENOM 17', fontsize=16)
-plt.xlabel(r'$x$',fontsize=14)
-plt.ylabel(r'$u(x,t)$', fontsize=14)
-plt.xlim((0,2))
+plt.title('WENO5')
+plt.xlabel(r'$x$')
+plt.ylabel(r'$u(x,t)$')
 # plt.vlines(x_s, -5, 5)
 plt.plot(a.x, a.u, color='forestgreen', linestyle='dashed', linewidth=2) # 21
-plt.plot(b.x, b.u, color='navy', linestyle='dashdot', linewidth=2) # 41
+plt.plot(b.x, b.u, color='navy', linestyle='dashdot', linewidth=2, marker='o') # 41
 plt.plot(c.x, c.u, color='red', linestyle='dashed', linewidth=2) # 81
 plt.plot(d.x, d.u, color='mediumorchid', linestyle='dashdot', linewidth=2) # 161
-plt.plot(e.x, e.u, color='teal', linestyle='dashed', linewidth=2) # 321
-plt.plot(f.x, f.u, color='black', linestyle='dashdot', linewidth=2) # 641
+# plt.plot(e.x, e.u, color='teal', linestyle='dashed', linewidth=2) # 321
+# plt.plot(f.x, f.u, color='black', linestyle='dashdot', linewidth=2) # 641
 plt.show()
 
 

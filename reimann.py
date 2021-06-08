@@ -58,8 +58,8 @@ class euler:
 			self.q = get_quadrature_weights(p)
 			self.quad_points = get_quadrature_points(p)
 
-		# conds = [self.x <= 0, self.x > 0]
-		# # LAX
+		conds = [self.x <= 0, self.x > 0]
+		# LAX
 		# self.u_p = np.array([
 		# 	np.piecewise(self.x, conds, [0.445, 0.5]),
 		# 	np.piecewise(self.x, conds, [0.698, 0.0]),
@@ -74,12 +74,15 @@ class euler:
 		# 	]).T
 
 		# Woodward-Colella Blast Wave
-		conds = [(self.x >= 0) & (self.x < 0.1), (self.x >= 0.1) & (self.x < 0.9), self.x >= 0.9]
-		self.u_p = np.array([
-			np.piecewise(self.x, conds, [1.0, 1.0, 1.0]),
-			np.piecewise(self.x, conds, [0.0, 0.0, 0.0]),
-			np.piecewise(self.x, conds, [1000.0, 0.01, 100.0])
-			]).T
+		# conds = [(self.x >= 0) & (self.x < 0.1), (self.x >= 0.1) & (self.x < 0.9), self.x >= 0.9]
+		# self.u_p = np.array([
+		# 	np.piecewise(self.x, conds, [1.0, 1.0, 1.0]),
+		# 	np.piecewise(self.x, conds, [0.0, 0.0, 0.0]),
+		# 	np.piecewise(self.x, conds, [1000.0, 0.01, 100.0])
+		# 	]).T
+
+		# self.left_boundary = np.array([self.u_p[0,0],0,self.u_p[0,2]])
+		# self.right_boundary = np.array([self.u_p[-1,0],0,self.u_p[-1,2]])
 		# print(self.u_p)
 		# sys.exit()
 
@@ -96,16 +99,16 @@ class euler:
 		# 	]).T
 
 		# Martin-Taylor
-		# A_rho = 0.1
-		# kappa_rho = 5.0
-		# x_sw = -4
-		# conds = [self.x <= x_sw, self.x > x_sw]
+		A_rho = 0.1
+		kappa_rho = 5.0
+		x_sw = -4
+		conds = [self.x <= x_sw, self.x > x_sw]
 
-		# self.u_p = np.array([
-		# 	np.piecewise(self.x, conds, [lambda x: 0.635700, lambda x: 0.500000 + A_rho*np.sin(kappa_rho * x)]),
-		# 	np.piecewise(self.x, conds, [0.414200, 0.0]),
-		# 	np.piecewise(self.x, conds, [1.401800, 1.0])
-		# 	]).T
+		self.u_p = np.array([
+			np.piecewise(self.x, conds, [lambda x: 0.635700, lambda x: 0.500000 + A_rho*np.sin(kappa_rho * x)]),
+			np.piecewise(self.x, conds, [0.414200, 0.0]),
+			np.piecewise(self.x, conds, [1.401800, 1.0])
+			]).T
 
 		# Titares-Toro
 		# A_rho = 0.1
@@ -232,6 +235,9 @@ class euler:
 	# 	return np.flip(u_p_reconstructed, axis=0)[self.r:-self.r]
 
 	def weno_characteristic_left(self):
+		# left_boundary = np.tile(self.left_boundary, (self.r,1))
+		# right_boundary = np.tile(self.right_boundary, (self.r-1,1))
+		# u = np.vstack((left_boundary, self.u_p, right_boundary))
 		u = np.pad(self.u_p, ((self.r, self.r-1), (0,0)), mode='reflect', reflect_type='odd')
 		# x_extended = np.linspace(self.x_0 - self.r*self.h, self.x_f + (self.r - 1)*self.h, self.k + 2*self.r -1)
 		# plt.plot(x_extended, u[:,0], marker='o')
@@ -264,6 +270,9 @@ class euler:
 		return (np.matmul(Q, u_p_reconstructed.reshape(len(u),self.num_vars,1))).reshape((len(u),self.num_vars))[self.r:-self.r]
 
 	def weno_characteristic_right(self):
+		# left_boundary = np.tile(self.left_boundary, (self.r-1,1))
+		# right_boundary = np.tile(self.right_boundary, (self.r,1))
+		# u = np.flip(np.vstack((left_boundary, self.u_p, right_boundary)), axis=0)
 		u = np.flip(np.pad(self.u_p, ((self.r-1, self.r), (0,0)), mode='reflect', reflect_type='odd'), axis=0)
 		u_p_reconstructed = np.zeros(u.shape) 
 		P = np.zeros(np.append((self.r+1), u.shape))
@@ -326,7 +335,7 @@ class euler:
 		self.entropy = np.log(e)-(self.gamma-1)*np.log(self.u_p[:,0])
 
 	def rk4(self):
-		self.tau = self.CFL * self.h / self.get_maximum_characteristic(self.u_p)
+		# self.tau = self.CFL * self.h / self.get_maximum_characteristic(self.u_p)
 
 		u_c = self.u_c
 
@@ -371,7 +380,7 @@ class euler:
 	# 	self.u_p = self.get_primitive_vars(self.u_c)
 
 	def ssprk3(self):
-		self.tau = self.CFL * self.h / self.get_maximum_characteristic(self.u_p) 
+		# self.tau = self.CFL * self.h / self.get_maximum_characteristic(self.u_p) 
 		u_c = self.u_c
 		
 		k1 = -self.get_dudx()
@@ -409,7 +418,7 @@ class euler:
 		# self.u_p = self.get_primitive_vars(self.u_c)
 
 	def sdc(self):
-		self.tau = self.CFL * self.h / self.get_maximum_characteristic(self.u_p)
+		
 		w = np.empty(np.append(self.p, np.append(2*self.p-1, np.shape(self.u_c))))
 		dudx = np.empty(np.append(self.p, np.append(2*self.p-1, np.shape(self.u_c))))
 
@@ -451,6 +460,9 @@ class euler:
 		# line3, = ax.plot(self.x,self.u_p[:,2],'g-')
 		while self.t < self.t_f:
 		# for i in range(2):
+			self.tau = self.CFL * self.h / self.get_maximum_characteristic(self.u_p)
+			if self.t + self.tau > self.t_f:
+				self.tau = self.t_f - self.t
 			if self.time_int == 'rk4':
 				self.rk4()
 			elif self.time_int == 'sdc': 
@@ -478,34 +490,40 @@ class euler:
 		# self.elapsed_time = time.clock() - self.start_time
 		# print('done, time: ', self.elapsed_time)		
 
-x0 = 0
-xf = 1
-tf = 0.038
-# N = 6401
-# CFL = 0.01
+x0 = -7
+xf = 3
+tf = 2.0
+N = 6401
+CFL = 0.5
 # problem_type = 'moving-shock'
 characteristic = True
+fig, ax = plt.subplots(1, 1, constrained_layout=True)
 
-# print(np.finfo(0.11).tiny)
-a = euler(x0, xf, tf, 201, 0.1, 1, 9, characteristic, 'rk4')
-# b = euler(x0, xf, tf, 1001, 0.1, 7, None, characteristic, 'edge', 'sdc')
-# b = euler(x0, xf, tf, 101, CFL, 7, 9, characteristic, 'edge', 'sdc')
-# c = euler(x0, xf, tf, 201, CFL, 7, 9, characteristic, 'edge', 'sdc')
-# d = euler(x0, xf, tf, 401, CFL, 7, 9, characteristic, 'edge', 'sdc')
-# e = euler(x0, xf, tf, 801, CFL, 7, 9, characteristic, 'edge', 'sdc')
+ax.set_xlabel(r'$x$', fontsize=14)
+ax.set_ylabel(r'$u(x,t)$', fontsize=14)
+ax.set_title(r'$r=8$ ' + '\n' + 'SDC4 \n' +  r'$CFL=0.5$ ', y=1.0, pad=-48, loc='right', fontsize=16)
+ax.set_xlim(-3.5,0.5)
+ax.set_ylim(0.45,0.80)
+# fig.set_size_inches(12, 4, forward=True)
+# plt.rcParams["figure.figsize"] = (20,555)
+a = euler(x0, xf, tf, 51, CFL, 8, 3, characteristic, 'sdc')
+b = euler(x0, xf, tf, 101, CFL, 8, 3, characteristic, 'sdc')
+c = euler(x0, xf, tf, 201, CFL, 8, 3, characteristic, 'sdc')
+d = euler(x0, xf, tf, 401, CFL, 8, 3, characteristic, 'sdc')
+e = euler(x0, xf, tf, 801, CFL, 8, 3, characteristic, 'sdc')
+f = euler(x0, xf, tf, 1601, CFL, 8, 3, characteristic, 'sdc')
 # f = euler(x0, xf, tf, 1601, CFL, 7, 9, characteristic, 'edge', 'sdc')
-# plt.title("15, CFL=0.01, rk4")
-plt.plot(a.x, a.u_p[:,0], linewidth=1, color='black')
-# plt.xlim(0.5,0.9)
-# plt.plot(b.x, b.u_p[:,0], linewidth=1, color='mediumorchid')
-# plt.plot(c.x, c.u_p[:,0], linestyle='dashed', linewidth=2, color='teal')
-# plt.plot(d.x, d.u_p[:,0], linestyle='dashed', linewidth=2, color='navy')
-# plt.plot(e.x, e.u_p[:,0], linestyle='dashed', linewidth=2, color='forestgreen')
-# plt.plot(f.x, f.u_p[:,0], linestyle='dashed', linewidth=2, color='red')
+
+ax.plot(a.x, a.u_p[:,0], linestyle='dashed', linewidth=2, color='black')
+ax.plot(b.x, b.u_p[:,0], linestyle='dashed', linewidth=2, color='mediumorchid')
+ax.plot(c.x, c.u_p[:,0], linestyle='dashed', linewidth=2, color='teal')
+ax.plot(d.x, d.u_p[:,0], linestyle='dashed', linewidth=2, color='navy')
+ax.plot(e.x, e.u_p[:,0], linestyle='dashed', linewidth=2, color='forestgreen')
+ax.plot(f.x, f.u_p[:,0], linestyle='dashed', linewidth=2, color='red')
 
 plt.show()
 # plt.legend(["rk4", "sdc4", "sdc6", "sdc8", "sdc10", "sdc12"], loc="lower left")
-# plt.title("Density Profile at t=5.0, Moving Shock, N=500")
+
 
 # fig, axs = plt.subplots(3,2)
 # axs[0,0].plot(rk4.x, rk4.u_p[:,0], marker='.')

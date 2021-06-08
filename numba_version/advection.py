@@ -186,4 +186,4 @@ class advection:
 # # sdc5 = advection(0, 1, 5, 101, 1, 0.5, 2, 3, 'sdc', 'wrap', 'smooth')
 # # mod_sdc = advection(0, 1, 5, 101, 1, 0.5, 2, 3, 'mod_sdc', 'wrap', 'smooth')
 
-a1 = advection(-1, 1, 20, 21, 1, 1.0, 6, 4, 'rk4', 'wrap', 'discontinuous', True)
+a1 = advection(-1, 1, 26, 21, 1, 1.0, 6, 4, 'rk4', 'wrap', 'discontinuous', True)

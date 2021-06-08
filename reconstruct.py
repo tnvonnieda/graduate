@@ -215,7 +215,7 @@ def calculate_beta_5(u, u_minus, u_plus):
 # 				beta[k_s] += sigma_6[k_s,l,m]*np.dot(Q_inverse, u[2*r-k_s-l])*np.dot(Q_inverse, u[2*r-k_s-m])
 # 	return beta
 
-# @jit(nopython=True, parallel=True)
+@jit(nopython=True, parallel=True)
 def calculate_beta_6(u, u_minus, u_plus):
 	beta = np.empty((7, len(u), len(u[0])), dtype=np.longdouble)
 	
@@ -277,7 +277,7 @@ def calculate_beta_6(u, u_minus, u_plus):
 
 	return beta
 
-# @jit(nopython=True, parallel=True)
+@jit(nopython=True, parallel=True)
 def calculate_beta_7(u, u_minus, u_plus):
 	beta = np.empty((8, len(u), len(u[0])), dtype=np.longdouble)
 

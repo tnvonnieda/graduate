@@ -35,7 +35,7 @@ def get_transform(u):
 
 class euler_system:
 
-	def __init__(self, x, up0, h, CFL, r, time_scaling=False, pad_mode='reflect', reflect_type='odd', mapping=False, eigenspace=True, power='r', boundary_velocity=False):
+	def __init__(self, x, up0, h, CFL, r, time_scaling=False, pad_mode='reflect', mapping=False, eigenspace=True, power='r', boundary_velocity=False):
 		self.CFL = CFL
 		self.h = h
 		self.m = up.shape[1]
@@ -108,7 +108,7 @@ class euler_system:
 		# if self.boundary_velocity:
 		# 	left_boundary = np.tile(self.left_boundary, (r,1))
 		# 	right_boundary = np.tile(self.right_boundary, (r,1))
-		# 	u = np.vstack((self.left_boundary, self.up, self.right_boundary))
+			# u = np.vstack((self.left_boundary, self.up, self.right_boundary))
 		# 	# u = np.pad(self.up,((self.r,self.r),(0,0)),
 		# 	# 	mode='constant',
 		# 	# 	constant_values=(((self.up0[0,0],0,self.up0[0,2]),(self.up0[-1,0],0,self.up0[-1,2])),(0,0)))
@@ -253,7 +253,7 @@ class euler_system:
 		# line1, = ax.plot(self.x,self.up[:,0],'r-')
 		# line2, = ax.plot(self.x,self.up[:,1],'b-')
 		# line3, = ax.plot(self.x,self.up[:,2],'g-')
-		while self.t < 0.038:
+		while self.t < 0.019:
 			self.RK4()
 			# plt.plot(self.x, self.up)
 			# plt.show()
@@ -289,9 +289,9 @@ up = np.array([
 	np.piecewise(x, conds, [1000, 0.01, 100.0])
 	]).T
 
-euler = euler_system(x, up, h, CFL, r, time_scaling=False, pad_mode='reflect', reflect_type='odd', mapping=True, eigenspace=True, power='r', boundary_velocity=False)
+euler = euler_system(x, up, h, CFL, r, time_scaling=False, pad_mode='reflect', mapping=True, eigenspace=True, power='r', boundary_velocity=False)
 up = euler.run()
-plt.plot(x, up[:,0])
+plt.plot(x, up[:,0], marker='.')
 plt.show()
 # euler.run()
 

@@ -59,25 +59,6 @@ def euler(x_0, x_f, t_f, k, CFL, r, p, characteristic, time_int):
 		np.piecewise(x, conds, [1000.0, 0.01, 100.0])
 		]).T
 
-	# A_rho = 0.2
-	# kappa_rho = 5.0
-	# x_sw = -4
-	# conds = [x <= x_sw, x > x_sw]
-
-	# # global u_p
-	# u_p_global = np.array([
-	# 	np.piecewise(x, conds, [lambda x: 27/7, lambda x: 1.0 + A_rho*np.sin(kappa_rho * x)]),
-	# 	np.piecewise(x, conds, [4*np.sqrt(35)/9, 0.0]),
-	# 	np.piecewise(x, conds, [31/3, 1.0])
-	# 	]).T
-		
-	# conds = [x < -4.0, x >= -4.0]			
-	# u_p = np.array([
-	# 	np.piecewise(x, conds, [lambda x: 27/7, lambda x: 1.0+1/5*np.sin(5*x)]),
-	# 	np.piecewise(x, conds, [4*np.sqrt(35)/9, 0.0]),
-	# 	np.piecewise(x, conds, [31/3, 1.0])
-	# 	]).T
-
 	num_vars = u_p_global.shape[1]
 	def get_characteristic_transform(u):
 		u = 1/2*(shift(u,-1)+u)

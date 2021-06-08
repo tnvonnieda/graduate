@@ -58,41 +58,16 @@ def euler(x_0, x_f, t_f, k, CFL, r, p, characteristic, time_int):
 		q = get_quadrature_weights(p)
 		quad_points = get_quadrature_points(p)
 
-	# A_rho = 0.2
-	# kappa_rho = 5.0
-	# x_sw = -4
-	# conds = [x <= x_sw, x > x_sw]
-
-	# # global u_p
-	# u_p_global = np.array([
-	# 	np.piecewise(x, conds, [lambda x: 27/7, lambda x: 1.0 + A_rho*np.sin(kappa_rho * x)]),
-	# 	np.piecewise(x, conds, [4*np.sqrt(35)/9, 0.0]),
-	# 	np.piecewise(x, conds, [31/3, 1.0])
-	# 	]).T
-
 	# Woodward-Colella Blast Wave
-	# conds = [(x >= 0) & (x < 0.1), (x >= 0.1) & (x < 0.9), x >= 0.9]
-	# u_p_global = np.array([
-	# 	np.piecewise(x, conds, [1.0, 1.0, 1.0]),
-	# 	np.piecewise(x, conds, [0.0, 0.0, 0.0]),
-	# 	np.piecewise(x, conds, [1000.0, 0.01, 100.0])
-	# 	]).T
-	
-	conds = [x <= 0, x > 0]
-	# LAX
+	conds = [(x >= 0) & (x < 0.1), (x >= 0.1) & (x < 0.9), x >= 0.9]
 	u_p_global = np.array([
-		np.piecewise(x, conds, [0.445, 0.5]),
-		np.piecewise(x, conds, [0.698, 0.0]),
-		np.piecewise(x, conds, [3.528, 0.571])
+		np.piecewise(x, conds, [1.0, 1.0, 1.0]),
+		np.piecewise(x, conds, [0.0, 0.0, 0.0]),
+		np.piecewise(x, conds, [1000.0, 0.01, 100.0])
 		]).T
-	# conds = [x < -4.0, x >= -4.0]			
-	# u_p = np.array([
-	# 	np.piecewise(x, conds, [lambda x: 27/7, lambda x: 1.0+1/5*np.sin(5*x)]),
-	# 	np.piecewise(x, conds, [4*np.sqrt(35)/9, 0.0]),
-	# 	np.piecewise(x, conds, [31/3, 1.0])
-	# 	]).T
 
 	num_vars = u_p_global.shape[1]
+
 	def get_characteristic_transform(u):
 		u = 1/2*(shift(u,-1)+u)
 		c = np.sqrt(abs(gamma*(u[:,2]+Pi)/abs(u[:,0])))
@@ -129,28 +104,9 @@ def euler(x_0, x_f, t_f, k, CFL, r, p, characteristic, time_int):
 
 	@njit
 	def build_weno_reconstructions(u_p_extended_l, u_p_extended_r, Q_l, Q_inverse_l, Q_r, Q_inverse_r, rho_max_diff_array, p_max_diff_array):				
-		u_p_reconstructed_l = np.zeros((k-1,3)) 
-		u_p_reconstructed_r = np.zeros((k-1,3))
+		u_p_reconstructed_l = np.zeros((k + 2*r + 1,3)) 
+		u_p_reconstructed_r = np.zeros((k + 2*r + 1,3))
 
-		# rho_max_diff_array = np.zeros(2*r-1) # the maximum density difference over the necessary stencils (see Gerolymos eq. 39a)
-		# p_max_diff_array = np.zeros(2*r-1) # the maximum density difference over the necessary stencils (see Gerolymos eq. 39a)
-		# l_array = np.arange(-r+1, r)
-		# print(u_p_extended_l)
-		# print(u_p_global)
-		# print(u_p_extended_l[r])
-		# if r > 1:
-		# 	for idx, l in enumerate(l_array):
-		# 		for i in range(k-1):
-		# 			rho_diff_i = abs(u_p_extended_l[i+r+l+1,0] - u_p_extended_l[i+r+l,0])
-		# 			p_diff_i = abs(u_p_extended_l[i+r+l+1,2] - u_p_extended_l[i+r+l,2])
-		# 			rho_max_diff_array[idx] = max(rho_max_diff_array[idx], rho_diff_i)
-		# 			p_max_diff_array[idx] = max(p_max_diff_array[idx], p_diff_i)
-				# rho_max_diff_array[idx] = np.max((np.abs(shift(u_left[:,0], -l-1) - shift(u_left[:,0], -l)))[r:-r])
-				# p_max_diff_array[idx] = np.max((np.abs(shift(u_left[:,2], -l-1) - shift(u_left[:,2], -l)))[r:-r])
-
-		# print(rho_max_diff_array)
-		# print(p_max_diff_array)
-		# sys.exit()
 		''' 
 		It looks like numba needs the initialization of the following variables 
 		here for "liveness" confirmation.
@@ -161,9 +117,9 @@ def euler(x_0, x_f, t_f, k, CFL, r, p, characteristic, time_int):
 		u_p_reconstructed_r_i = np.zeros(3)
 		P_l_i = np.zeros((r+1,3))
 		P_r_i = np.zeros((r+1,3))
-		# print(u_p_global)
-		# print("")
-		for i in range(k-1):
+		# print(Q_l)
+		# sys.exit()
+		for i in range(k+2*r+1):
 			ROR_l = False
 			ROR_r = False
 			r_i = r			
@@ -178,23 +134,9 @@ def euler(x_0, x_f, t_f, k, CFL, r, p, characteristic, time_int):
 					ROR_l = True
 					ROR_r = True
 				else:
-					''' VERIFIED AGAINST OLD CODE '''
-					# beta_l = np.zeros((r+1,3))
-					# beta_l[0] = (np.dot(Q_inverse_l[i],u_p_extended_l[i+r+1])-np.dot(Q_inverse_l[i],u_p_extended_l[i+r]))**2
-					# beta_l[1] = (np.dot(Q_inverse_l[i],u_p_extended_l[i+r])-np.dot(Q_inverse_l[i],u_p_extended_l[i+r-1]))**2
-
 					beta_l = calculate_beta_characteristic(u_p_extended_l[i:i+2*r_i+1], r_i, Q_inverse_l[i])
 					beta_r = calculate_beta_characteristic(u_p_extended_r[i:i+2*r_i+1], r_i, Q_inverse_r[i])
-					# if r_i==1:
-					# 	print(beta_l)
-					# 	print(beta_r)
-					# 	print(P_r_i)
-					# 	print(P_l_i)
-					# 	sys.exit
-					# beta_r = np.zeros((r+1,3))			
-					# beta_r[0] = (np.dot(Q_inverse_r[i],u_p_extended_r[i+r+1])-np.dot(Q_inverse_r[i],u_p_extended_r[i+r]))**2
-					# beta_r[1] = (np.dot(Q_inverse_r[i],u_p_extended_r[i+r])-np.dot(Q_inverse_r[i],u_p_extended_r[i+r-1]))**2
-					
+										
 					alpha_l =  b[r_i,0:r_i+1,0:r_i+1] / (tiny + beta_l**(r_i+1))
 					omega_l = alpha_l / alpha_l.sum(axis=0)
 					alpha_l = omega_l*(b[r_i,0:r_i+1,0:r_i+1] + b[r_i,0:r_i+1,0:r_i+1]**2 - 3*b[r_i,0:r_i+1,0:r_i+1]*omega_l + omega_l**2) / (b[r_i,0:r_i+1,0:r_i+1]**2 + omega_l*(1 - 2*b[r_i,0:r_i+1,0:r_i+1]))
@@ -230,10 +172,7 @@ def euler(x_0, x_f, t_f, k, CFL, r, p, characteristic, time_int):
 					if r_i == 1:
 						ROR_l = (u_p_reconstructed_l_i[0] >= 0) and (u_p_reconstructed_l_i[2] >= 0)
 						ROR_r = (u_p_reconstructed_r_i[0] >= 0) and (u_p_reconstructed_r_i[0] >= 0)
-						# print(u_p_reconstructed_l_i)
-						# print(u_p_reconstructed_r_i)
-						# print(ROR_l)
-						# print(ROR_r)
+						
 					else:
 						rho_diff_l = abs(u_p_reconstructed_l_i[0] - u_p_extended_l[r+i,0]) # difference of boundary density (i+1/2) to cell centered rho (i)
 						p_diff_l = abs(u_p_reconstructed_l_i[2] - u_p_extended_l[r+i,2])# difference of boundary pressure (i+1/2) to cell centered rho (i)
@@ -243,17 +182,13 @@ def euler(x_0, x_f, t_f, k, CFL, r, p, characteristic, time_int):
 						
 						ROR_l = (rho_diff_l <= 1/2*np.max(rho_max_diff_array[0:-1])) and (p_diff_l <= 1/2*np.max(p_max_diff_array[0:-1]))
 						ROR_r = (rho_diff_r <= 1/2*np.max(rho_max_diff_array[1:])) and (p_diff_r <= 1/2*np.max(p_max_diff_array[1:]))
-				if ROR_l == False or ROR_r == False:
-					# print("Order reduced: ", r_i - 1)
-					r_i = r_i - 1
-					# print(r_i)
-					# print(i)
-				else:
-					# if r_i == 1:
-					# 	print(u_p_reconstructed_l_i)
-					# 	print(u_p_reconstructed_r_i)
-					u_p_reconstructed_l[i] = u_p_reconstructed_l_i
-					u_p_reconstructed_r[i] = u_p_reconstructed_r_i
+				# if ROR_l == False or ROR_r == False:
+					# r_i = r_i - 1
+				# else:
+				u_p_reconstructed_l[i] = u_p_reconstructed_l_i
+				u_p_reconstructed_r[i] = u_p_reconstructed_r_i
+				ROR_r = True
+				ROR_l = True
 			
 		return u_p_reconstructed_l, u_p_reconstructed_r
 
@@ -263,9 +198,22 @@ def euler(x_0, x_f, t_f, k, CFL, r, p, characteristic, time_int):
 		Inititalize padded array for WENO reconstructions
 		np.ascontiguousarray() is necessary for improved numba efficiency
 		'''
-		u_p_extended = np.pad(u_p, ((r, r), (0,0)), mode='reflect', reflect_type='odd')
+		# u_p_extended = np.pad(u_p, ((r, r), (0,0)), mode='reflect', reflect_type='odd')
+
+		u_p_extended = np.pad(u_p, ((2*r+1, 2*r+1), (0,0)), mode='reflect', reflect_type='even')
+		u_p_extended[0:2*r+1,1] = 0
+		u_p_extended[k+2*r+1:k + 4*r + 2,1] = 0
+		# x_extended = np.linspace(x_0 - (2*r+1)*h, x_f + (2*r+1)*h, k + 4*r +2)
+		# plt.plot(x_extended, u_p_extended)
+		# plt.show()
+		# sys.exit()
+        # u = np.flip(np.pad(self.u_p, ((2*self.r, 2*self.r+1), (0,0)), mode='reflect', reflect_type='even'), axis=0)
+        # u[0:2*self.r+1,1] = 0
+        # u[self.k+2*self.r+1:self.k + 4*self.r + 1,1] = 0
+
 		u_p_extended_l = np.ascontiguousarray(u_p_extended[0:-1])
 		u_p_extended_r = np.ascontiguousarray(np.flip(u_p_extended[1:], axis=0))
+	
 		'''
 		Calculate the max density and pressure differences between adjacent cell centers
 		over the entire stencil for each grid point. It's slightly more efficient to
@@ -304,7 +252,7 @@ def euler(x_0, x_f, t_f, k, CFL, r, p, characteristic, time_int):
 		outside of the numba box
 		'''
 
-		Q, Q_inverse = get_characteristic_transform(u_p_extended[r:k+r+1])
+		Q, Q_inverse = get_characteristic_transform(u_p_extended)
 
 		Q_l = np.ascontiguousarray(Q[0:-1])
 		Q_inverse_l = np.ascontiguousarray(Q_inverse[0:-1])
@@ -319,25 +267,16 @@ def euler(x_0, x_f, t_f, k, CFL, r, p, characteristic, time_int):
 		'''
 		u_p_reconstructed_l, u_p_reconstructed_r = build_weno_reconstructions(u_p_extended_l, u_p_extended_r, Q_l, Q_inverse_l, Q_r, Q_inverse_r, rho_max_diff_array, p_max_diff_array)
 		u_p_reconstructed_r = np.flip(u_p_reconstructed_r, axis=0)
-		
-		# print(u_p_reconstructed_l)
-
-		
-		# # print(u_p_reconstructed_l)
-		# plt.plot(x_half, u_p_reconstructed_l)
-		# plt.show()
 		# print(u_p_reconstructed_r)
-
+		# sys.exit()
 		u_c_reconstructed_l = get_conservative_vars(u_p_reconstructed_l)
 		u_c_reconstructed_r = get_conservative_vars(u_p_reconstructed_r)
 
 		flux_left = get_flux(u_p_reconstructed_l) + max_characteristic*u_c_reconstructed_l
 		flux_right = get_flux(u_p_reconstructed_r) - max_characteristic*u_c_reconstructed_r
-		# plt.plot(x_half, flux_right)
-		# plt.show()
-		# sys.exit()
-		u_split = np.pad(1/2*(flux_left + flux_right), [(r+1, r+1), (0,0)], mode='reflect', reflect_type='odd')
-
+		
+		# u_split = np.pad(1/2*(flux_left + flux_right), [(r+1, r+1), (0,0)], mode='reflect', reflect_type='odd')
+		u_split = 1/2*(flux_left + flux_right)
 		dudx = np.zeros(np.shape(u_split))
 		
 		for i in range(len(d[r])):
@@ -373,14 +312,9 @@ def euler(x_0, x_f, t_f, k, CFL, r, p, characteristic, time_int):
 		u_c_0 = np.copy(u_c)
 		
 		k1 = -get_dudx(u_p)
-		# plt.plot(x, k1)
-		# plt.show()
-		# sys.exit()
-		# print(k1)
 		u_c = u_c_0 + tau*k1
 		u_p = get_primitive_vars(u_c)		
-		# print(u_p)
-		# sys.exit()
+
 		k2 = -get_dudx(u_p)
 		u_c = 3/4*u_c_0 + 1/4*(u_c_0 + tau*k1) + 1/4*tau*k2
 		u_p = get_primitive_vars(u_c)
@@ -391,13 +325,13 @@ def euler(x_0, x_f, t_f, k, CFL, r, p, characteristic, time_int):
 
 		return u_p, u_c, tau
 
-	def sdc(u_p, u_c):		
+	def sdc(u_p, u_c):
 		tau = CFL * h / get_maximum_characteristic(u_p)
 		w = np.empty(np.append(p, np.append(2*p-1, np.shape(u_c))))
 		dudx = np.empty(np.append(p, np.append(2*p-1, np.shape(u_c))))
 
 		w[:] = u_c
-		dudx[:] = get_dudx()
+		dudx[:] = get_dudx(u_p)
 
 		for k in range(1,2*p-1):
 			w[1,k] = w[0,k]
@@ -412,12 +346,13 @@ def euler(x_0, x_f, t_f, k, CFL, r, p, characteristic, time_int):
 				w[j,k] += w[j-1,k]
 				u_c = w[j-1,k]
 				u_p = get_primitive_vars(u_c)
-				dudx[j-1,k] = get_dudx()
+				dudx[j-1,k] = get_dudx(u_p)
 				w[j,k] += tau*(quad_points[j]-quad_points[j-1])/2*(-dudx[j-1,k] + dudx[j-1,k-1])
 			u_c = w[p-1,k]
 			u_p = get_primitive_vars(u_c)
 			if k < 2*p-2:				
-				dudx[p-1,k] = get_dudx()
+				dudx[p-1,k] = get_dudx(u_p)
+		return u_p, u_c, tau
 	
 	# plt.ion()
 	# fig = plt.figure(1)
@@ -433,7 +368,7 @@ def euler(x_0, x_f, t_f, k, CFL, r, p, characteristic, time_int):
 		elif time_int == 'ssprk3':
 			u_p_global, u_c_global, tau = ssprk3(u_p_global, u_c_global)
 		elif time_int == 'sdc': 
-			u_p_global, u_c_global, tau = sdc(u_p, u_c)
+			u_p_global, u_c_global, tau = sdc(u_p_global, u_c_global)
 		t = t + tau
 		# print(tau)
 		# sys.exit()
@@ -449,14 +384,14 @@ def euler(x_0, x_f, t_f, k, CFL, r, p, characteristic, time_int):
 	# print('done, time: ', elapsed_time)	
 	return x, u_p_global
 
-x0 = -5.0
-xf = 5.0
-tf = 1.3
-N = 1601
-CFL = 0.4
+x0 = 0.0
+xf = 1.0
+tf = 0.038
+N = 201
+CFL = 0.1
 characteristic = True
 
-x, u_p = euler(x0, xf, tf, N, CFL, 8, 3, characteristic, 'rk4')
+x, u_p = euler(x0, xf, tf, N, CFL, 5, 3, characteristic, 'sdc')
 plt.plot(x, u_p[:,0], marker='.')
 
 plt.show()

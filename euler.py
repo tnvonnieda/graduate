@@ -407,10 +407,10 @@ class euler:
 		
 		# plt.show()
 		# sys.exit()
-		# plt.ion()
-		# fig = plt.figure(1)
-		# ax = fig.add_subplot(111)
-		# line1, = ax.plot(self.x,self.u_p[:,0],'r-')
+		plt.ion()
+		fig = plt.figure(1)
+		ax = fig.add_subplot(111)
+		line1, = ax.plot(self.x,self.u_p[:,0],'r-')
 		# line2, = ax.plot(self.x,self.u_p[:,1],'b-')
 		# line3, = ax.plot(self.x,self.u_p[:,2],'g-')
 		while self.t < self.t_f:
@@ -425,11 +425,11 @@ class euler:
 			self.t = self.t + self.tau
 			# elif self.time_int == 'sdc6':
 			# 	self.sdc6()
-			# line1.set_ydata(self.u_p[:,0])
+			line1.set_ydata(self.u_p[:,0])
 			# line2.set_ydata(self.u_p[:,1])
 			# line3.set_ydata(self.u_p[:,2])
-			# fig.canvas.draw()
-			# fig.canvas.flush_events()
+			fig.canvas.draw()
+			fig.canvas.flush_events()
 		self.calculate_entropy()
 		# self.elapsed_time = time.clock() - self.start_time
 		print('done, time: ', self.elapsed_time)		
@@ -442,7 +442,7 @@ N = 401
 problem_type = 'shock-entropy'
 characteristic = False
 
-rk4 = euler(x0, xf, tf, N, 0.5, 3, 3, characteristic, 'reflect', 'rk4', problem_type, False)
+rk4 = euler(x0, xf, tf, N, 0.5, 2, 3, characteristic, 'reflect', 'rk4', problem_type, False)
 plt.plot(rk4.x, rk4.u_p[:,0], marker='.')
 
 # sdc4 = euler(x0, xf, tf, N, 0.5, 5, 3, characteristic, 'edge', 'sdc', problem_type)
